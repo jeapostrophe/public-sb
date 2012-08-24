@@ -60,6 +60,7 @@
 
   (serve/servlet
    main-dispatch
+   #:listen-ip #f
    #:command-line? #t
    #:extra-files-paths
    (list (build-path root "static"))
