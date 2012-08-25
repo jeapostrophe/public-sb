@@ -1,5 +1,7 @@
 #lang racket/base
 (require racket/cmdline
+         racket/match
+         racket/list
          racket/runtime-path
          racket/tcp
          racket/port
@@ -8,6 +10,18 @@
          web-server/dispatch)
 
 (define-runtime-path root ".")
+
+(define (every-n n f l)
+  (cond
+    [(empty? l)
+     empty]
+    [((length l) . < . n)
+     (list (apply f l))]
+    [else
+     (define-values (these rest)
+       (split-at l n))
+     (cons (apply f these)
+           (every-n n f rest))]))
 
 (define (go http-port client-port)
   (define to #f)
@@ -33,23 +47,34 @@
     (response/xexpr
      `(html
        (head
-        (title "Sound off!"))
+        (title "Sound off!")
+        (script
+         "function sound(u) {
+           var xmlhttp = new XMLHttpRequest();
+           xmlhttp.open(\"GET\", u, true);
+           xmlhttp.send();
+          };"))
        (body
         ,(if to
            `(div
-             (p 
+             (table
+              ,@(every-n
+                 3
+                 (λ tds
+                   `(tr ,@tds))
+                 (for/list ([s (in-list sounds)])
+                   `(td (a ([href ,(format "javascript:sound(~s);"
+                                           (main-url page/play s))])
+                           ,s)))))
+             (p
               ,(format "The client is connected and ~a sounds are available."
-                       (length sounds)))
-             (ul
-              ,@(for/list ([s (in-list sounds)])
-                  `(li
-                    (a ([href ,(main-url page/play s)])
-                       ,s)))))
+                       (length sounds))))
            "The client is not connected.")))))
 
   (define (page/play req sound)
-    (write sound to)
-    (flush-output to)
+    (when to
+      (write sound to)
+      (flush-output to))
     (redirect-to (main-url page/main)))
 
   (define-values (main-dispatch main-url)
