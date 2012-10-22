@@ -39,8 +39,9 @@
                        0)
           log-file-path)
          (define-values (sb stdout stdin stderr)
-           (subprocess #f #f #f 
+           (subprocess (current-output-port) (current-input-port) (current-error-port) 
                        "/usr/bin/mplayer"
+                       "-quiet"
                        (build-path dir some-sound)))
          (void))
        (loop)])))
